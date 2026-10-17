@@ -1,0 +1,102 @@
+import { test, expect } from '@playwright/test';
+const opening = '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 *';
+async function paste(page, pgn) {
+  await page.getByLabel('PGN notation').fill(pgn);
+  await page.getByRole('button', { name: 'Load game' }).click();
+}
+const square = (page, square) => page.locator(`[data-square="${square}"] .piece`);
+test.beforeEach(async ({ page }) => { await page.goto('/'); });
+test('paste, independent knights, hidden identity, castling, navigation and show all', async ({ page }) => {
+  await paste(page, opening);
+  await expect(page.locator('#message')).toHaveText('Loaded 12 half-moves. All pieces visible.');
+  await expect(page.locator('#board .piece')).toHaveCount(32);
+  await expect(page.locator('[data-square="a1"]')).toHaveClass(/dark/);
+  await expect(page.locator('[data-square="a8"]')).toHaveClass(/light/);
+  await page.getByRole('checkbox', { name: 'White Knight · g1', exact: true }).uncheck();
+  await expect(page.getByRole('checkbox', { name: 'White Knight · g1', exact: true })).toBeFocused();
+  await expect(square(page, 'g1')).toHaveCount(0);
+  await expect(square(page, 'b1')).toHaveCount(1);
+  await page.locator('[data-ply="3"]').click();
+  await expect(square(page, 'f3')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Go to start', exact: true }).click();
+  await expect(square(page, 'g1')).toHaveCount(0);
+  await page.locator('[data-ply="9"]').click();
+  await expect(square(page, 'g1')).toHaveAttribute('data-piece-id', 'w-e1');
+  await expect(square(page, 'f1')).toHaveAttribute('data-piece-id', 'w-h1');
+  await expect(square(page, 'f3')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Show all', exact: true }).click();
+  await expect(square(page, 'f3')).toHaveAttribute('data-piece-id', 'w-g1');
+  await expect(page.locator('#board .piece')).toHaveCount(32);
+  await expect(page.locator('#progress')).toContainText('9 / 12');
+});
+test('file upload and pawns-only maintain correct structure moving forward and back', async ({ page }) => {
+  await page.locator('#file').setInputFiles({ name: 'study.pgn', mimeType: 'text/plain', buffer: Buffer.from('1. e4 d5 2. exd5 Qxd5 *') });
+  await expect(page.locator('#message')).toContainText('Loaded 4 half-moves');
+  await page.getByRole('button', { name: 'Pawns only' }).click();
+  await expect(page.locator('#board .piece')).toHaveCount(16);
+  await page.getByRole('button', { name: 'Next move', exact: true }).click();
+  await expect(square(page, 'e4')).toHaveAttribute('data-piece-id', 'w-e2');
+  await page.getByRole('button', { name: 'Go to end', exact: true }).click();
+  await expect(page.locator('#board .piece')).toHaveCount(14);
+  await expect(square(page, 'd5')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Previous move', exact: true }).click();
+  await expect(square(page, 'd5')).toHaveAttribute('data-piece-id', 'w-e2');
+  await expect(page.locator('#board .piece')).toHaveCount(15);
+  await page.getByRole('button', { name: 'Show all', exact: true }).click();
+  await expect(page.locator('#board .piece')).toHaveCount(31);
+});
+test('captured non-pawn remains controllable and restores on rewind', async ({ page }) => {
+  await paste(page, '1. e4 d5 2. exd5 Qxd5 3. Nc3 Qe5+ 4. Be2 Qxe2+ *');
+  const bishop = page.getByRole('checkbox', { name: 'White Bishop · f1', exact: true });
+  await bishop.uncheck();
+  await page.getByRole('button', { name: 'Go to end', exact: true }).click();
+  await expect(bishop.locator('..')).toContainText('Captured');
+  await bishop.check();
+  await page.getByRole('button', { name: 'Previous move', exact: true }).click();
+  await expect(square(page, 'e2')).toHaveAttribute('data-piece-id', 'w-f1');
+});
+test('en passant and promotion including independently retained promotion settings', async ({ page }) => {
+  await paste(page, '1. e4 a6 2. e5 d5 3. exd6 *');
+  await page.getByRole('button', { name: 'Go to end', exact: true }).click();
+  await expect(square(page, 'd5')).toHaveCount(0);
+  await expect(square(page, 'd6')).toHaveAttribute('data-piece-id', 'w-e2');
+  await paste(page, '[SetUp "1"]\n[FEN "7k/P7/8/8/8/8/8/7K w - - 0 1"]\n\n1. a8=Q+ *');
+  const pawnGroup = page.locator('.color-group').first().getByRole('checkbox', { name: 'Pawns' });
+  await pawnGroup.uncheck();
+  await expect(square(page, 'a7')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Go to end', exact: true }).click();
+  await expect(square(page, 'a8')).toHaveAttribute('data-piece-id', 'w-a7');
+  const promotion = page.getByRole('checkbox', { name: 'White Pawn · a7 promoted Queen', exact: true });
+  await promotion.uncheck();
+  await expect(square(page, 'a8')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Go to start', exact: true }).click();
+  await pawnGroup.check();
+  await expect(square(page, 'a7')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Go to end', exact: true }).click();
+  await expect(square(page, 'a8')).toHaveCount(0);
+});
+test('invalid and multiple-game input preserve current valid game and settings', async ({ page }) => {
+  await page.getByRole('button', { name: 'Pawns only' }).click();
+  await page.getByRole('button', { name: 'Next move', exact: true }).click();
+  for (const bad of ['1. e5 *', '1. e4 *\n1. d4 *', '']) {
+    await paste(page, bad);
+    await expect(page.locator('#message')).toHaveClass('error');
+    await expect(page.locator('#progress')).toContainText('1 / 16');
+    await expect(page.locator('#board .piece')).toHaveCount(16);
+    await expect(square(page, 'e4')).toHaveAttribute('data-piece-id', 'w-e2');
+  }
+});
+test('desktop presentation, keyboard and small-screen layout', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.locator('h1').click();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#progress')).toContainText('1 / 16');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#progress')).toContainText('Start position');
+  await page.screenshot({ path: 'test-results/desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#board')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/mobile.png', fullPage: true });
+  expect(errors).toEqual([]);
+});

@@ -2,34 +2,29 @@
 
 ## Milestone and status
 
-V1 source and documentation are implemented and verified; the authorized GitHub delivery target is `main`. User acceptance remains pending. The delivery commit and push outcome are reported in the task's final report; a push alone does not accept the milestone.
+V1 plus the requested movement-history extension are implemented and verified for delivery to `main`. User acceptance remains pending. The final task report records the delivery commit and push outcome; a push alone does not accept the milestone.
 
-## Implemented
+## Implemented behavior
 
-Client-only PGN paste/file import, board, clickable main-line moves, half-move navigation and keyboard shortcuts. Independent non-pawn visibility, pawn groups, Show all and Pawns only preserve underlying chess state. Stable identities survive movement, captures, castling and promotion. Captured non-pawns remain controllable. Promotion switches from group to individual visibility; rewinds retain both settings. Import errors preserve the current game, position and visibility. See README for usage and PROJECT_BRIEF for scope/decisions.
+The existing PGN paste/upload, main-line replay, navigation, independent non-pawn controls, pawn groups, capture restoration and promotion visibility remain in place. A separate Movement path selector now chooses any stable piece identity, including hidden/captured pieces and pawns. Numbered arrows and an ordered move list show actual movement through the selected ply only. Rewind truncates the path; castling includes rook movement; promotion retains the complete identity history. Captures stop movement at the last occupied square.
 
-## Verification evidence
+Trace selection and visibility do not change one another. Clear affects only the trace; a valid new game clears selection, while invalid imports preserve it. See README for usage and PROJECT_BRIEF for accepted scope and implementation defaults.
 
-The implementation task verified installation, 9 Node model tests, 6 Chromium browser tests and the production build. Desktop and narrow-screen screenshots were inspected. Delivery verification (2026-10-17, Node 24):
+## Verification (2026-10-18)
 
-- `npm ci --cache /tmp/piece-npm-cache`: passed, 19 packages installed.
-- `npm test`: passed, 9 tests; no failed, skipped or cancelled tests.
-- `npm run build`: passed with Vite 7.3.7.
-- `CHROMIUM_PATH=/usr/bin/chromium npm run test:browser`: passed, all 6 tests.
-- Diff/documentation review completed; generated dependencies, build output and browser artifacts are ignored.
+- `npm test`: all 12 model tests passed, including the original 9 and history identity, chronology, castling, captures, en passant, promotion and nonmutation checks.
+- `npm run build`: passed, Vite 7.3.7.
+- `CHROMIUM_PATH=/usr/bin/chromium npm run test:browser`: all 8 tests passed, including the original 6 visibility/import/navigation regressions and new trace independence, rewind, switching, clearing, captured selection, castling and import-reset checks.
+- Chromium trace screenshot inspected; overlay is aligned with square centers. Existing responsive-layout check passes.
+- An initial new nonmutation assertion failed because structuredClone removes chess.js Move prototypes; comparing normalized snapshots corrected the test. No outstanding test failure.
+- Source/documentation diff reviewed before commit. Build output and browser artifacts remain ignored. A pre-existing README removal is preserved outside this task's commit.
 
-No required verification failed or remained unrun. Cross-browser and user acceptance checks below remain outstanding.
-
-Coverage includes frame-by-frame comparisons with chess.js positions, independent knight identities, both castling directions, capture restoration, en passant, promotion/underpromotion, comments/variations, invalid and multiple-game input, paste/upload, presets, keyboard navigation, focus retention, board coloring and narrow-screen overflow.
+Prior v1 setup verified npm installation with a writable cache. No dependency changes were needed for tracing.
 
 ## Limitations and blockers
 
-- Single standard game, main line only; annotations/variations are not displayed. No move creation, persistence, tracing arrows or board rotation.
-- FEN-start labels identify initial FEN squares, not unknown earlier origins. Empty games are rejected.
-- Chromium checked; Firefox/Safari and a formal accessibility audit are unverified. Glyph appearance depends on installed system fonts.
-- Playwright's browser download received HTTP 403 (domain forbidden). System Chromium works, so this does not block tested delivery.
-- No known blocking application defect. User acceptance with personal PGNs and target browsers is outstanding; no deployment performed.
+Single standard game, main line only; no move creation, persistence or board rotation. FEN-start identities use initial FEN squares. Arrows connect move endpoints (including knights); repeated/overlapping paths can overlap visually, with the ordered list preserving exact chronology. Long-game performance has not been benchmarked. Firefox/Safari and formal accessibility testing remain unverified. No known blocking application defect; no deployment performed.
 
 ## Next action
 
-Review the pushed v1 against personal study games and confirm acceptance. Check Firefox/Safari if they are target browsers. Plan tracing only as a separately authorized feature after v1 review.
+Review traces and visibility with personal PGNs and confirm acceptance, including the chosen current-ply-only and all-piece selection defaults. Check target browsers before expanding the feature.

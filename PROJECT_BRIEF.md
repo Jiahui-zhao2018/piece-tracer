@@ -27,8 +27,16 @@ Accepted v1 requirements:
 
 Automated model/browser checks cover paste/upload, correct positions, pawn-only forward/backward review, independent knights, hidden identity after movement/rewind, captures, castling, en passant, promotion, Show all and invalid-input preservation. See HANDOFF for actual results and remaining checks. User acceptance is pending.
 
-## Deferred and proposed work
+## Accepted movement-history extension (2026-10-18)
 
-Move-history arrows for a selected non-pawn are explicitly deferred; only stable identities are prepared now. No tracing interface is implemented. Next recommended proposal: user acceptance review with personal PGNs and target-browser checks. This proposal is not an accepted feature expansion.
+The user has now requested visualization of a selected piece's historical movement without changing existing visibility behavior. This supersedes the earlier tracing deferral.
+
+Implementation defaults: one selector for any piece (including pawns, hidden and captured pieces); numbered start-to-end arrows and a matching move list through the selected ply only. Selection survives navigation and visibility presets; Clear removes only the trace. Valid new games reset selection; invalid imports preserve it. Paths include castling rook movement and retain identity through promotion. These defaults avoid coupling selection to rendering or revealing future moves.
+
+Acceptance checks: correct identity and chronological movement, rewind/jumps truncate history, captures add no fictitious move, castling/promotion remain correct, and all existing visibility checks continue to pass.
+
+## Proposed next work
+
+Recommended proposal: user acceptance review with personal PGNs and target-browser checks. This proposal is not an accepted feature expansion.
 
 GitHub delivery to `main` is authorized; force-pushing, merging into another branch and deployment are outside this delivery instruction.

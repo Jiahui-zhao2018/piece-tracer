@@ -23,11 +23,17 @@ Paste a single PGN and click **Load game**, or choose **Upload .pgn**. A short e
 - Captured pieces stay in the panel. Their visibility choice applies when rewinding.
 - Promoted pawns have an individual control, labeled with their original square. Before promotion they follow the pawn group; after promotion they follow the individual setting, initially on. The control is available before promotion so its future setting can be adjusted. Presets also update promotion controls.
 
+## Trace a piece
+
+Choose any piece in **Movement path → Trace a piece**, including hidden or captured pieces. Numbered arrows and the matching move list show only its moves up to the selected position. Each arrow connects the move's start and end squares; knight arrows do not represent a sliding route. Rewinding removes later arrows. Castling includes the rook's movement; promotion keeps the pawn's identity and full path.
+
+Tracing is separate from visibility: choosing or clearing a trace never changes checkboxes, and visibility presets never clear the trace. A captured piece's path stops at its last occupied square. **Clear** removes the overlay. Loading a valid new game clears selection; a rejected import preserves it. Overlapping or repeated paths may share arrows; the numbered move list gives the exact sequence.
+
 ## Design and scope
 
-Vite + plain JavaScript, with chess.js validating PGN and producing legal main-line moves. Complete immutable position snapshots are separate from visibility settings. Piece identities use color and initial square, surviving captures, castling and promotion; future move-history arrows can reference these identities. Hidden pieces are omitted only from rendering.
+Vite + plain JavaScript, with chess.js validating PGN and producing legal main-line moves. Complete immutable position snapshots are separate from visibility settings. Piece identities use color and initial square, surviving captures, castling and promotion; movement-history arrows reference these same identities. Hidden pieces are omitted only from rendering.
 
-Standard chess only, White at the bottom, one game per input. Comments, annotations and variations are parsed but not shown. Standard PGN FEN starting positions are supported; for these positions, identity labels use the initial FEN squares (earlier origins cannot be inferred). Empty games are rejected. This is recorded-game review: the board does not create moves. Reloading resets the app. No tracing interface or storage is included.
+Standard chess only, White at the bottom, one game per input. Comments, annotations and variations are parsed but not shown. Standard PGN FEN starting positions are supported; for these positions, identity labels use the initial FEN squares (earlier origins cannot be inferred). Empty games are rejected. This is recorded-game review: the board does not create moves. Reloading resets the app. No storage is included.
 
 ## Verify
 

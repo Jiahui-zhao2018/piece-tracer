@@ -2,12 +2,13 @@
 
 ## Structure and conventions
 
-- `src/model.js`: chess.js PGN validation, stable piece identities, position snapshots, visibility helpers.
+- `src/model.js`: chess.js PGN validation, stable piece identities, position snapshots, visibility helpers and read-only piece history.
 - `src/main.js`: browser UI, imports, navigation and visibility controls.
 - `src/style.css` and `index.html`: presentation and entry point.
 - `tests/model.test.js`: Node model tests; `tests/browser/app.spec.js`: Playwright interaction tests.
 - Plain JavaScript ES modules and Vite; use the existing npm lockfile. No backend, accounts or remote application services.
 - Keep complete chess state separate from rendering visibility. Never remove hidden pieces from replay state. Preserve identity through captures, castling, promotion and rewind.
+- Trace selection and overlays must remain separate from visibility. Derive paths from stable identities through the selected ply, including castling rook movement; never reveal future moves.
 - Use textContent for imported metadata. Keep generated output, dependencies and credentials out of Git; preserve unrelated changes.
 - Cloud tasks already have isolated checkouts. Use the existing checkout; do not create worktrees unless requested.
 

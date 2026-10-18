@@ -83,3 +83,19 @@ export function isVisible(piece, visibility) {
 export function pawnsOnly(game) {
   return { wPawns: true, bPawns: true, pieces: Object.fromEntries(game.pieces.map(p => [p.id, false])) };
 }
+
+// Derive actual movement from identity snapshots, including a castling rook.
+// Disappearance on capture is not a move; promotion keeps the same identity.
+export function pieceHistory(game, id, ply) {
+  if (!game.pieces.some(piece => piece.id === id)) return [];
+  const history = [];
+  let previous = game.pieces.find(piece => piece.id === id).start;
+  for (let step = 1; step <= Math.min(ply, game.moves.length); step++) {
+    const square = Object.keys(game.frames[step].position).find(square => game.frames[step].position[square].id === id);
+    if (square && square !== previous) {
+      history.push({ from: previous, to: square, ply: step, san: game.moves[step - 1].san });
+      previous = square;
+    }
+  }
+  return history;
+}

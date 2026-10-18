@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
-import { loadGame, newVisibility, pawnsOnly, isVisible } from '../src/model.js';
+import { loadGame, newVisibility, pawnsOnly, isVisible, pieceHistory } from '../src/model.js';
 const opening = '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 *';
 function assertFrames(game) {
   game.frames.forEach(frame => {
@@ -78,4 +78,28 @@ test('invalid, empty, unsupported and multiple-game inputs are rejected', () => 
 test('punctuation and move-like text inside PGN header values remain valid', () => {
   const game = loadGame('[Event "Round 1. Final (study); {practice}"]\n[White "Player"]\n\n1. e4 e5 *');
   assert.equal(game.moves.length, 2);
+});
+test('history follows one identity, excludes future moves, and does not mutate game or visibility', () => {
+  const game = loadGame('1. Nf3 Nf6 2. Ng1 Ng8 3. Nf3 *');
+  const original = structuredClone(game), visibility = pawnsOnly(game), settings = structuredClone(visibility);
+  assert.deepEqual(pieceHistory(game, 'w-g1', 0), []);
+  assert.deepEqual(pieceHistory(game, 'w-g1', 2).map(m => [m.from, m.to]), [['g1', 'f3']]);
+  assert.deepEqual(pieceHistory(game, 'w-g1', 5).map(m => [m.from, m.to]), [['g1', 'f3'], ['f3', 'g1'], ['g1', 'f3']]);
+  assert.deepEqual(pieceHistory(game, 'w-b1', 5), []);
+  assert.deepEqual(pieceHistory(game, 'unknown', 5), []);
+  assert.deepEqual(structuredClone(game), original); assert.deepEqual(visibility, settings);
+});
+test('history includes castling rook movement and stops at capture', () => {
+  const castle = loadGame(opening);
+  assert.deepEqual(pieceHistory(castle, 'w-h1', 12).map(m => [m.from, m.to]), [['h1', 'f1'], ['f1', 'e1']]);
+  const captured = loadGame('1. e4 d5 2. exd5 Qxd5 *');
+  assert.deepEqual(pieceHistory(captured, 'w-e2', 4).map(m => [m.from, m.to]), [['e2', 'e4'], ['e4', 'd5']]);
+  const ep = loadGame('1. e4 a6 2. e5 d5 3. exd6 *');
+  assert.equal(pieceHistory(ep, 'w-e2', 5).at(-1).to, 'd6');
+  assert.equal(pieceHistory(ep, 'b-d7', 5).length, 1);
+});
+test('promotion history retains pawn identity after promotion', () => {
+  const game = loadGame('[SetUp "1"]\n[FEN "7k/P7/8/8/8/8/8/7K w - - 0 1"]\n\n1. a8=Q+ Kh7 2. Qb8 *');
+  assert.deepEqual(pieceHistory(game, 'w-a7', 3).map(m => [m.from, m.to]), [['a7', 'a8'], ['a8', 'b8']]);
+  assert.equal(pieceHistory(game, 'w-a7', 1).length, 1);
 });
